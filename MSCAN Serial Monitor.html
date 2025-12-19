@@ -1,0 +1,805 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="MSCAN Serial Monitor - OBD2 diagnostyka z komunikacją szeregową">
+    <meta name="theme-color" content="#0066cc">
+    <title>MSCAN Serial Monitor</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #0066cc;
+            --primary-hover: #0052a3;
+            --dark: #1a1a1a;
+            --light: #f5f5f5;
+            --border: #e0e0e0;
+            --success: #27ae60;
+            --danger: #e74c3c;
+            --warning: #f39c12;
+        }
+
+        html, body {
+            height: 100%;
+            width: 100%;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, var(--light) 0%, #eeeeee 100%);
+            color: var(--dark);
+            overflow: hidden;
+        }
+
+        body {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            background: linear-gradient(135deg, var(--dark) 0%, #2a2a2a 100%);
+            color: #c0c0c0;
+            padding: 16px 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            flex-shrink: 0;
+            z-index: 100;
+            border-bottom: 3px solid var(--primary);
+        }
+
+        .header h1 {
+            font-size: 24px;
+            font-weight: 700;
+            letter-spacing: 1px;
+        }
+
+        .container {
+            flex: 1;
+            display: flex;
+            flex-direction: row-reverse;
+            min-height: 0;
+            overflow: hidden;
+        }
+
+        .sidebar {
+            width: 80px;
+            background: linear-gradient(135deg, var(--dark) 0%, #2a2a2a 100%);
+            border-left: 2px solid var(--primary);
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            flex-shrink: 0;
+            box-shadow: -2px 0 12px rgba(0, 0, 0, 0.2);
+        }
+
+        .sidebar-header {
+            padding: 16px 8px;
+            text-align: center;
+            border-bottom: 2px solid var(--primary);
+            flex-shrink: 0;
+        }
+
+        .sidebar-header h2 {
+            font-size: 12px;
+            color: #c0c0c0;
+            margin: 0;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .sidebar-menu {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            padding: 12px 8px;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .sidebar-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            padding: 12px 8px;
+            border: 2px solid transparent;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.05);
+            color: #999;
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .sidebar-icon {
+            font-size: 24px;
+            display: block;
+        }
+
+        .sidebar-label {
+            display: block;
+            font-size: 10px;
+        }
+
+        .sidebar-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: var(--primary);
+        }
+
+        .sidebar-btn.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+            box-shadow: 0 4px 12px rgba(0, 102, 204, 0.3);
+        }
+
+        .content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            overflow-x: hidden;
+            background: linear-gradient(135deg, var(--light) 0%, #eeeeee 100%);
+            padding: 16px;
+        }
+
+        .tab-content {
+            display: none;
+            flex: 1;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+
+        .tab-content.active {
+            display: flex !important;
+        }
+
+        .form-section {
+            background: white;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 16px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            border-left: 4px solid var(--primary);
+        }
+
+        .form-group {
+            margin-bottom: 14px;
+        }
+
+        .form-group:last-child {
+            margin-bottom: 0;
+        }
+
+        label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 6px;
+            color: var(--dark);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        input, select, textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: 'Courier New', monospace;
+            transition: all 0.3s ease;
+            background: #fafafa;
+        }
+
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            background: white;
+            box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.1);
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 14px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            flex: 1;
+            min-width: 120px;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary) 0%, #0052a3 100%);
+            color: white;
+            box-shadow: 0 4px 12px rgba(0, 102, 204, 0.3);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(0, 102, 204, 0.4);
+        }
+
+        .btn-primary:active {
+            transform: translateY(0);
+        }
+
+        .btn-secondary {
+            background: white;
+            color: var(--dark);
+            border: 2px solid var(--border);
+        }
+
+        .btn-secondary:hover {
+            background: #fafafa;
+        }
+
+        .btn-danger {
+            background: var(--danger);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #c0392b;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+
+        .status-connected {
+            background: var(--success);
+            animation: pulse 2s infinite;
+        }
+
+        .status-disconnected {
+            background: var(--danger);
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .serial-display {
+            background: #1a1a1a;
+            color: #00ff00;
+            border-radius: 8px;
+            padding: 12px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            overflow-y: auto;
+            height: 200px;
+            border: 1px solid #333;
+            margin-bottom: 12px;
+            word-break: break-all;
+            line-height: 1.4;
+        }
+
+        .serial-display.rx {
+            border-left: 4px solid #27ae60;
+        }
+
+        .serial-display.tx {
+            border-left: 4px solid #3498db;
+        }
+
+        .serial-line {
+            padding: 2px 0;
+        }
+
+        .serial-line.rx {
+            color: #27ae60;
+        }
+
+        .serial-line.tx {
+            color: #3498db;
+        }
+
+        .serial-line.error {
+            color: #e74c3c;
+        }
+
+        .hex-input-group {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 8px;
+        }
+
+        .notification {
+            position: fixed;
+            top: 70px;
+            right: 16px;
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            animation: slideIn 0.3s ease;
+            z-index: 2000;
+            max-width: 300px;
+        }
+
+        .notification.success {
+            background: var(--success);
+            color: white;
+        }
+
+        .notification.error {
+            background: var(--danger);
+            color: white;
+        }
+
+        .notification.info {
+            background: var(--primary);
+            color: white;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .info-box {
+            background: #e3f2fd;
+            border-left: 4px solid var(--primary);
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 12px;
+            font-size: 13px;
+            color: #1565c0;
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        @media (max-width: 768px) {
+            .grid-2 {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>⚙️ MSCAN Serial Monitor</h1>
+    </div>
+
+    <div class="container">
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h2>Menu</h2>
+            </div>
+            <div class="sidebar-menu">
+                <button class="sidebar-btn active" data-tab="serial" onclick="switchTab('serial')">
+                    <span class="sidebar-icon">📡</span>
+                    <span class="sidebar-label">Serial</span>
+                </button>
+                <button class="sidebar-btn" data-tab="obd2" onclick="switchTab('obd2')">
+                    <span class="sidebar-icon">🚗</span>
+                    <span class="sidebar-label">OBD2</span>
+                </button>
+                <button class="sidebar-btn" data-tab="logs" onclick="switchTab('logs')">
+                    <span class="sidebar-icon">📋</span>
+                    <span class="sidebar-label">Logi</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="content">
+            <!-- SERIAL TAB -->
+            <div id="serial" class="tab-content active">
+                <div class="form-section">
+                    <h2 style="margin-bottom: 16px;">📡 Połączenie szeregowe</h2>
+                    <div class="info-box">
+                        💡 Wybierz port COM, ustaw prędkość, a następnie naciśnij "Połącz"
+                    </div>
+
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label>Port COM</label>
+                            <select id="serialPort">
+                                <option value="">-- Wybierz port --</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Prędkość (baud)</label>
+                            <select id="serialBaudrate">
+                                <option value="9600">9600</option>
+                                <option value="19200">19200</option>
+                                <option value="38400">38400</option>
+                                <option value="57600" selected>57600</option>
+                                <option value="115200">115200</option>
+                                <option value="230400">230400</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="button-group">
+                        <button class="btn btn-primary" id="connectBtn" onclick="connectSerial()">🔌 Połącz</button>
+                        <button class="btn btn-secondary" id="refreshPortsBtn" onclick="refreshPorts()">🔄 Odśwież porty</button>
+                        <button class="btn btn-danger" id="disconnectBtn" onclick="disconnectSerial()" disabled>❌ Rozłącz</button>
+                    </div>
+
+                    <div style="margin-top: 12px; padding: 12px; background: #f5f5f5; border-radius: 8px; font-size: 13px;">
+                        <strong>Status:</strong> <span class="status-indicator status-disconnected" id="statusIndicator"></span>
+                        <span id="statusText">Rozłączony</span>
+                    </div>
+                </div>
+
+                <!-- SEND DATA -->
+                <div class="form-section">
+                    <h3 style="margin-bottom: 16px;">📤 Wysyłanie danych (HEX)</h3>
+                    <div class="form-group">
+                        <label>Dane do wysłania (HEX format, np: 62F1FF 10 01)</label>
+                        <input type="text" id="hexSendInput" placeholder="Wpisz dane w formacie HEX..." onkeypress="if(event.key==='Enter') sendHexData()">
+                    </div>
+                    <div class="button-group">
+                        <button class="btn btn-primary" id="sendBtn" onclick="sendHexData()" disabled>📤 Wyślij</button>
+                        <button class="btn btn-secondary" onclick="document.getElementById('hexSendInput').value = ''">Wyczyść pole</button>
+                    </div>
+                </div>
+
+                <!-- RX DATA -->
+                <div class="form-section">
+                    <h3 style="margin-bottom: 12px;">📥 Odebrane dane (HEX)</h3>
+                    <div class="serial-display rx" id="rxDisplay"></div>
+                    <button class="btn btn-secondary" onclick="clearDisplay('rx')" style="width: 100%;">🗑️ Wyczyść RX</button>
+                </div>
+
+                <!-- TX DATA -->
+                <div class="form-section">
+                    <h3 style="margin-bottom: 12px;">📤 Wysłane dane (HEX)</h3>
+                    <div class="serial-display tx" id="txDisplay"></div>
+                    <button class="btn btn-secondary" onclick="clearDisplay('tx')" style="width: 100%;">🗑️ Wyczyść TX</button>
+                </div>
+            </div>
+
+            <!-- OBD2 TAB -->
+            <div id="obd2" class="tab-content">
+                <div class="form-section">
+                    <h2 style="margin-bottom: 16px;">🚗 OBD2 Komendy</h2>
+                    <div class="info-box">
+                        ℹ️ Wyślij popularne komendy diagnostyczne
+                    </div>
+
+                    <div class="button-group" style="margin-bottom: 16px;">
+                        <button class="btn btn-primary" onclick="sendOBD2('0100')" id="pidBtn0100">PID 01 00</button>
+                        <button class="btn btn-primary" onclick="sendOBD2('0105')" id="pidBtn0105">Temperatura</button>
+                        <button class="btn btn-primary" onclick="sendOBD2('010C')" id="pidBtn010C">RPM</button>
+                        <button class="btn btn-primary" onclick="sendOBD2('010D')" id="pidBtn010D">Prędkość</button>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Custom PID (HEX)</label>
+                        <input type="text" id="customPID" placeholder="np: 0120">
+                    </div>
+                    <button class="btn btn-primary" onclick="sendCustomPID()" style="width: 100%;">Wyślij Custom PID</button>
+                </div>
+            </div>
+
+            <!-- LOGS TAB -->
+            <div id="logs" class="tab-content">
+                <div class="form-section">
+                    <h2 style="margin-bottom: 16px;">📋 Historia komunikacji</h2>
+                    <div id="logsList" style="height: 400px; overflow-y: auto; background: #f5f5f5; border-radius: 8px; padding: 12px; font-family: 'Courier New', monospace; font-size: 12px; border: 1px solid var(--border);"></div>
+                    <div class="button-group" style="margin-top: 12px;">
+                        <button class="btn btn-secondary" onclick="exportLogs()" style="flex: 1;">💾 Pobierz logi</button>
+                        <button class="btn btn-danger" onclick="clearLogs()" style="flex: 1;">🗑️ Wyczyść logi</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ============ CONFIG ============
+        let serialPort = null;
+        let serialReader = null;
+        let isConnected = false;
+        let rxData = [];
+        let txData = [];
+        let logs = [];
+
+        // ============ INIT ============
+        document.addEventListener('DOMContentLoaded', function() {
+            if (!("serial" in navigator)) {
+                showNotification('Web Serial API nie jest wspierana w tej przeglądarce!', 'error');
+                document.getElementById('connectBtn').disabled = true;
+            } else {
+                refreshPorts();
+            }
+        });
+
+        // ============ TAB SWITCHING ============
+        function switchTab(tabName) {
+            document.querySelectorAll('.sidebar-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+            document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
+            document.getElementById(tabName).classList.add('active');
+        }
+
+        // ============ SERIAL PORT FUNCTIONS ============
+        async function refreshPorts() {
+            const select = document.getElementById('serialPort');
+            select.innerHTML = '<option value="">-- Wybierz port --</option>';
+            
+            try {
+                const ports = await navigator.serial.getPorts();
+                if (ports.length === 0) {
+                    showNotification('Brak dostępnych portów COM', 'info');
+                    return;
+                }
+                ports.forEach((port, idx) => {
+                    const option = document.createElement('option');
+                    option.value = idx;
+                    option.textContent = `Port ${idx} (${port.getInfo().usbProductName || 'Unknown'})`;
+                    select.appendChild(option);
+                });
+            } catch (err) {
+                showNotification('Błąd odświeżania portów: ' + err.message, 'error');
+            }
+        }
+
+        async function connectSerial() {
+            const portIdx = document.getElementById('serialPort').value;
+            const baudrate = parseInt(document.getElementById('serialBaudrate').value);
+
+            if (!portIdx) {
+                showNotification('Wybierz port COM', 'error');
+                return;
+            }
+
+            try {
+                const ports = await navigator.serial.getPorts();
+                serialPort = ports[portIdx];
+
+                await serialPort.open({ baudRate: baudrate });
+                isConnected = true;
+
+                updateStatus(true);
+                document.getElementById('connectBtn').disabled = true;
+                document.getElementById('disconnectBtn').disabled = false;
+                document.getElementById('sendBtn').disabled = false;
+                document.getElementById('serialPort').disabled = true;
+                document.getElementById('serialBaudrate').disabled = true;
+
+                showNotification(`Połączono z portem ${portIdx} @ ${baudrate} baud`, 'success');
+
+                // Start reading
+                startReading();
+                addLog(`✓ Połączono z portem ${portIdx} @ ${baudrate} baud`);
+            } catch (err) {
+                showNotification('Błąd połączenia: ' + err.message, 'error');
+                addLog(`✗ Błąd połączenia: ${err.message}`, 'error');
+            }
+        }
+
+        function disconnectSerial() {
+            if (serialPort) {
+                serialPort.close();
+                isConnected = false;
+
+                updateStatus(false);
+                document.getElementById('connectBtn').disabled = false;
+                document.getElementById('disconnectBtn').disabled = true;
+                document.getElementById('sendBtn').disabled = true;
+                document.getElementById('serialPort').disabled = false;
+                document.getElementById('serialBaudrate').disabled = false;
+
+                showNotification('Rozłączono', 'info');
+                addLog('✓ Rozłączono');
+            }
+        }
+
+        async function startReading() {
+            while (serialPort.readable) {
+                const reader = serialPort.readable.getReader();
+                try {
+                    while (true) {
+                        const { value, done } = await reader.read();
+                        if (done) break;
+                        
+                        // Convert bytes to HEX
+                        const hexString = Array.from(value)
+                            .map(b => b.toString(16).toUpperCase().padStart(2, '0'))
+                            .join(' ');
+                        
+                        rxData.push(hexString);
+                        updateRXDisplay();
+                        addLog(`RX: ${hexString}`, 'rx');
+                    }
+                } catch (err) {
+                    showNotification('Błąd czytania: ' + err.message, 'error');
+                    addLog(`✗ Błąd czytania: ${err.message}`, 'error');
+                }
+                reader.releaseLock();
+            }
+        }
+
+        async function sendHexData() {
+            const input = document.getElementById('hexSendInput').value.trim();
+            if (!input) {
+                showNotification('Wpisz dane do wysłania', 'error');
+                return;
+            }
+
+            if (!isConnected) {
+                showNotification('Brak połączenia', 'error');
+                return;
+            }
+
+            try {
+                // Parse HEX string (spaces optional)
+                const hexArray = input.split(/\s+/).filter(x => x);
+                const byteArray = hexArray.map(h => parseInt(h, 16));
+
+                if (byteArray.some(b => isNaN(b) || b > 255 || b < 0)) {
+                    showNotification('Niepoprawny format HEX', 'error');
+                    return;
+                }
+
+                // Send data
+                const writer = serialPort.writable.getWriter();
+                await writer.write(new Uint8Array(byteArray));
+                writer.releaseLock();
+
+                const hexSent = byteArray.map(b => b.toString(16).toUpperCase().padStart(2, '0')).join(' ');
+                txData.push(hexSent);
+                updateTXDisplay();
+                addLog(`TX: ${hexSent}`, 'tx');
+                showNotification('Wysłano: ' + hexSent, 'success');
+
+                document.getElementById('hexSendInput').value = '';
+            } catch (err) {
+                showNotification('Błąd wysyłania: ' + err.message, 'error');
+                addLog(`✗ Błąd wysyłania: ${err.message}`, 'error');
+            }
+        }
+
+        function sendOBD2(pid) {
+            const cmd = pid;
+            document.getElementById('hexSendInput').value = cmd;
+            sendHexData();
+        }
+
+        function sendCustomPID() {
+            const pid = document.getElementById('customPID').value.trim();
+            if (!pid) {
+                showNotification('Wpisz PID', 'error');
+                return;
+            }
+            sendOBD2(pid);
+        }
+
+        // ============ DISPLAY FUNCTIONS ============
+        function updateRXDisplay() {
+            const display = document.getElementById('rxDisplay');
+            display.innerHTML = rxData.map(d => `<div class="serial-line rx">${d}</div>`).join('');
+            display.scrollTop = display.scrollHeight;
+        }
+
+        function updateTXDisplay() {
+            const display = document.getElementById('txDisplay');
+            display.innerHTML = txData.map(d => `<div class="serial-line tx">${d}</div>`).join('');
+            display.scrollTop = display.scrollHeight;
+        }
+
+        function clearDisplay(type) {
+            if (type === 'rx') {
+                rxData = [];
+                updateRXDisplay();
+                showNotification('Wyczyszczono RX', 'success');
+            } else if (type === 'tx') {
+                txData = [];
+                updateTXDisplay();
+                showNotification('Wyczyszczono TX', 'success');
+            }
+        }
+
+        function updateStatus(connected) {
+            const indicator = document.getElementById('statusIndicator');
+            const text = document.getElementById('statusText');
+            if (connected) {
+                indicator.classList.remove('status-disconnected');
+                indicator.classList.add('status-connected');
+                text.textContent = '🟢 Połączony';
+            } else {
+                indicator.classList.remove('status-connected');
+                indicator.classList.add('status-disconnected');
+                text.textContent = '🔴 Rozłączony';
+            }
+        }
+
+        // ============ LOGGING ============
+        function addLog(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString('pl-PL');
+            logs.push({ timestamp, message, type });
+            updateLogsList();
+        }
+
+        function updateLogsList() {
+            const logsList = document.getElementById('logsList');
+            logsList.innerHTML = logs.map(log => {
+                let color = '#999';
+                if (log.type === 'rx') color = '#27ae60';
+                if (log.type === 'tx') color = '#3498db';
+                if (log.type === 'error') color = '#e74c3c';
+                return `<div style="color: ${color}; margin-bottom: 4px;"><strong>[${log.timestamp}]</strong> ${log.message}</div>`;
+            }).join('');
+            logsList.scrollTop = logsList.scrollHeight;
+        }
+
+        function clearLogs() {
+            if (confirm('Wyczyścić wszystkie logi?')) {
+                logs = [];
+                updateLogsList();
+                showNotification('Logi wyczyszczono', 'success');
+            }
+        }
+
+        function exportLogs() {
+            const csv = logs.map(l => `${l.timestamp},"${l.message}",${l.type}`).join('\n');
+            const header = 'Czas,Wiadomość,Typ\n';
+            const blob = new Blob([header + csv], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `MSCAN_logi_${new Date().toISOString().slice(0,10)}.csv`;
+            a.click();
+            showNotification('Logi pobrane', 'success');
+        }
+
+        // ============ NOTIFICATIONS ============
+        function showNotification(message, type = 'info') {
+            const notif = document.createElement('div');
+            notif.className = `notification ${type}`;
+            notif.textContent = message;
+            document.body.appendChild(notif);
+            setTimeout(() => notif.remove(), 3000);
+        }
+    </script>
+</body>
+</html>
